@@ -1,10 +1,12 @@
 console.log("Connecting to server...");
 
 const VERTEX_SHADER_SRC = `
+  uniform vec2 u_position;
+
   attribute vec2 a_position;
   
   void main() {
-    gl_Position = vec4(a_position, 0.0, 1.0);
+    gl_Position = vec4(u_position + a_position, 0.0, 1.0);
   }
 `;
 
@@ -24,17 +26,15 @@ function main() {
   const canvas = document.getElementById("canvas");
   window.gl = canvas.getContext("webgl");
   const program = buildProgram(VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
-  drawFruit(program);
-}
-
-function drawFruit(program) {
-  gl.useProgram(program);
-  drawObject(program, 2, [0.333, 0.666, 1.000], [
+  const vertices = [
     -0.5, -0.5,
      0.5, -0.5,
     -0.5,  0.5,
      0.5,  0.5
-  ]);
+  ];
+  setupFruit(program, vertices);
+  drawFruit(program, [ 0.1,  0.1], vertices);
+  drawFruit(program, [-0.1, -0.1], vertices);
 }
 
 function buildShader(type, src) {
@@ -58,11 +58,23 @@ function buildProgram(vertexShaderSrc, fragmentShaderSrc) {
   return program;
 }
 
-function drawObject(program, coordDimensions, colors, vertices) {
+function setupFruit(program, vertices) {
+  // Clear canvas
+  gl.clearColor(0, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  gl.useProgram(program);
+
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+}
 
+function drawFruit(program, position, vertices) {
+  drawObject(program, position, 2, [0.333, 0.666, 1.000], vertices);
+}
+
+function drawObject(program, position, coordDimensions, colors, vertices) {
   // a_position
   const a_position = gl.getAttribLocation(program, "a_position");
   gl.enableVertexAttribArray(a_position);
@@ -71,8 +83,11 @@ function drawObject(program, coordDimensions, colors, vertices) {
   // u_color
   const u_color = gl.getUniformLocation(program, "u_color");
   gl.uniform3f(u_color, ...colors);
-  gl.clearColor(0, 0, 0, 1);
-  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  // u_position
+  const u_position = gl.getUniformLocation(program, "u_position");
+  gl.uniform2f(u_position, ...position);
+
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertices.length / coordDimensions);
 }
 
