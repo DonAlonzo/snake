@@ -1,12 +1,13 @@
 console.log("Connecting to server...");
 
 const VERTEX_SHADER_SRC = `
+  uniform vec2 u_view;
   uniform vec2 u_position;
 
   attribute vec2 a_position;
   
   void main() {
-    gl_Position = vec4(u_position + a_position, 0.0, 1.0);
+    gl_Position = vec4(u_view + u_position + a_position, 0.0, 1.0);
   }
 `;
 
@@ -27,14 +28,21 @@ function main() {
   window.gl = canvas.getContext("webgl");
   const program = buildProgram(VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
   const vertices = [
-    -0.5, -0.5,
-     0.5, -0.5,
-    -0.5,  0.5,
-     0.5,  0.5
+    -0.02, -0.02,
+     0.02, -0.02,
+    -0.02,  0.02,
+     0.02,  0.02
   ];
-  setupFruit(program, vertices);
-  drawFruit(program, [ 0.1,  0.1], vertices);
-  drawFruit(program, [-0.1, -0.1], vertices);
+  let t = 0;
+  let view = { x: -1.0, y: -1.0 };
+  setInterval(() => {
+    t += 0.060;
+    view.x = Math.sin(t / 4) * 0.5;
+    view.y = Math.cos(t / 4) * 0.5;
+    setupFruit(program, vertices, view);
+    drawFruit(program, [ 0.1,  0.1], vertices);
+    drawFruit(program, [-0.1, -0.1], vertices);
+  }, 1000/60);
 }
 
 function buildShader(type, src) {
@@ -58,7 +66,7 @@ function buildProgram(vertexShaderSrc, fragmentShaderSrc) {
   return program;
 }
 
-function setupFruit(program, vertices) {
+function setupFruit(program, vertices, view) {
   // Clear canvas
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT);
@@ -68,6 +76,10 @@ function setupFruit(program, vertices) {
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  
+  // u_view
+  const u_view = gl.getUniformLocation(program, "u_view");
+  gl.uniform2f(u_view, view.x, view.y);
 }
 
 function drawFruit(program, position, vertices) {
