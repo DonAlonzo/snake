@@ -24,25 +24,66 @@ const FRAGMENT_SHADER_SRC = `
 window.onload = main;
 
 function main() {
+  // Set up WebGL context
   const canvas = document.getElementById("canvas");
   window.gl = canvas.getContext("webgl");
-  const program = buildProgram(VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
-  const vertices = [
-    -0.02, -0.02,
-     0.02, -0.02,
-    -0.02,  0.02,
-     0.02,  0.02
-  ];
-  let t = 0;
-  let view = { x: -1.0, y: -1.0 };
-  setInterval(() => {
-    t += 0.060;
-    view.x = Math.sin(t / 4) * 0.5;
-    view.y = Math.cos(t / 4) * 0.5;
-    setupFruit(program, vertices, view);
-    drawFruit(program, [ 0.1,  0.1], vertices);
-    drawFruit(program, [-0.1, -0.1], vertices);
-  }, 1000/60);
+
+  // Create game instance
+  const game = new Game();
+
+  // Start loop
+  const loop = time => {
+    game.loop(time - (this.latestTime || time));
+    this.latestTime = time;
+    window.requestAnimationFrame(loop);
+  }
+  window.requestAnimationFrame(loop);
+}
+
+class Game {
+  constructor() {
+    this.program = buildProgram(VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
+    this.vertices = [
+      -0.02, -0.02,
+       0.02, -0.02,
+      -0.02,  0.02,
+       0.02,  0.02
+    ];
+    this.t = 0;
+    this.player = {
+      position: { x: 0, y: 0 },
+      direction: { x: 0, y: 0},
+      speed: 0.01
+    };
+    this.view = { x: 0, y: 0 };
+  }
+
+  loop(deltaTime) {
+    this.t += deltaTime;
+
+    // Listen to key presses
+    if (pressedKeys.isKeyPressed(keyBindings.LEFT)) {
+      this.player.direction.x = -1;
+      this.player.direction.y = 0;
+    } else if (pressedKeys.isKeyPressed(keyBindings.RIGHT)) {
+      this.player.direction.x = 1;
+      this.player.direction.y = 0;
+    } else if (pressedKeys.isKeyPressed(keyBindings.UP)) {
+      this.player.direction.x = 0;
+      this.player.direction.y = 1;
+    } else if (pressedKeys.isKeyPressed(keyBindings.DOWN)) {
+      this.player.direction.x = 0;
+      this.player.direction.y = -1;
+    }
+    this.player.position.x += this.player.direction.x * this.player.speed;
+    this.player.position.y += this.player.direction.y * this.player.speed;
+
+    this.view.x = this.player.position.x;
+    this.view.y = this.player.position.y;
+    setupFruit(this.program, this.vertices, this.view);
+    drawFruit(this.program, [ 0.1,  0.1], this.vertices);
+    drawFruit(this.program, [-0.1, -0.1], this.vertices);
+  }
 }
 
 function buildShader(type, src) {
@@ -119,3 +160,20 @@ ws.onerror = error => {
   console.error(error);
 };
 
+const pressedKeys = {
+  isKeyPressed(keyCode) { return !!pressedKeys[keyCode]; }
+};
+const keyBindings = {
+  LEFT:  37,
+  RIGHT: 39,
+  DOWN:  40,
+  UP:    38
+};
+
+document.addEventListener("keydown", event => {
+  pressedKeys[event.keyCode] = true;
+});
+
+document.addEventListener("keyup", event => {
+  pressedKeys[event.keyCode] = false;
+});
